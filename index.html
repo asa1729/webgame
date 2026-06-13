@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ポケモン捕獲ゲーム</title>
+</head>
+<body>
+    <div id="pokemon-game">
+        <p id="judgement">野生のピカチュウが現れた！</p>
+        <button onclick="throwBall(1)">モンスターボール</button>
+        <button onclick="throwBall(2)">スーパーボール</button>
+        </div>
+
+    <script>
+        // --- Express側にあった変数や関数をここに移植 ---
+        let mon = 'ピカチュウ';
+        let poke = 1;
+        let corr = [255, 20];
+        let left = [50, 30, 20];
+        let count = [0, 0, 0, 0, 0];
+        let cri_point = 0;
+        let all_inc = 0;
+        let cri_judge = [5, 5, 5, 5];
+
+        function encount() {
+            
+        }
+
+        function throwBall(ballType) {
+            // app.get("/pokemon") の中身のロジックをここに書く
+            // 例: switch(ballType) { ... }
+            
+            // 計算が終わったら、DOM（HTML）を直接書き換える
+            document.getElementById("judgement").innerText = `やった!${mon}を捕まえた！`;
+            // 必要なステータス画面を更新...
+        }
+    </script>
+</body>
+</html>
