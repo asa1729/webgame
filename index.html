@@ -23,7 +23,25 @@
         let cri_judge = [5, 5, 5, 5];
 
         function encount() {
-            
+            choose = Math.floor( Math.random() * 5 + 1 );
+            if(choose == 1){
+                mon = 'ピカチュウ'; corr[0] = 255; corr[1] = 20; return choose;
+            }
+            else if(choose == 2){
+                mon = 'モココ'; corr[0] = 190; corr[1] = 26; return choose;
+            }
+            else if(choose == 3 && (50 - left[0] + 30 - left[1] + 20 - left[2]) >= 20){
+                mon = 'ニョロトノ'; corr[0] = 120; corr[1] = 41; return choose;
+            }
+            else if(choose == 4 && (50 - left[0] + 30 - left[1] + 20 - left[2]) >= 20){
+                mon = 'ダンバル'; corr[0] = 45; corr[1] = 52; return choose;
+            }
+            else if(choose == 5 && (50 - left[0] + 30 - left[1] + 20 - left[2]) >= 50){
+                mon = 'ファイヤー'; corr[0] = 3; corr[1] = 165; return choose;
+            }
+            else{
+                return encount(corr, left);
+            }
         }
 
         function throwBall(ballType) {
