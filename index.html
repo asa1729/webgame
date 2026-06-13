@@ -2,28 +2,62 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>ポケモン捕獲ゲーム</title>
+    <title>ポケモンゲット</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; line-height: 1.6; }
+        .game-box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 500px; }
+        button { margin: 5px; padding: 10px; cursor: pointer; }
+        .status { margin-top: 20px; background: #f0f0f0; padding: 10px; border-radius: 4px; }
+    </style>
 </head>
 <body>
-    <div id="pokemon-game">
-        <p id="judgement">野生のピカチュウが現れた！</p>
-        <button onclick="throwBall(1)">モンスターボール</button>
-        <button onclick="throwBall(2)">スーパーボール</button>
+
+    <h1>ポケモンゲット</h1>
+
+    <div class="game-box">
+        <p id="message">野生のポケモンが現れた！</p>
+        <p><strong id="monster-name">ピカチュウが現れた！</strong></p> 
+        <p id="critical-msg" style="color: red; font-weight: bold;"></p>
+
+        <<hr>>
+
+        <p>どのボールを使う？</p>
+        <button onclick="throwBall(1)">モンスターボール (残り: <span id="left-0">50</span>)</button>
+        <button onclick="throwBall(2)">スーパーボール (残り: <span id="left-1">30</span>)</button>
+        <button onclick="throwBall(3)">ハイパーボール (残り: <span id="left-2">20</span>)</button>
+        <br><br>
+        <button onclick="throwBall(4)">次のポケモンを探す</button>
+        <button onclick="throwBall(6)" style="background-color: #ffcccc;">リセット</button>
+
+        <div class="status">
+            <h3>つかまえた数</h3>
+            <ul>
+                <li>ピカチュウ: <span id="count-0">0</span></li>
+                <li>モココ: <span id="count-1">0</span></li>
+                <li>ニョロトノ: <span id="count-2">0</span></li>
+                <li>ダンバル: <span id="count-3">0</span></li>
+                <li>ファイヤー: <span id="count-4">0</span></li>
+            </ul>
         </div>
+    </div>
 
     <script>
-        // --- Express側にあった変数や関数をここに移植 ---
+        // ゲームの状態を管理する変数（ブラウザを閉じるまで維持されます）
         let mon = 'ピカチュウ';
         let poke = 1;
         let corr = [255, 20];
         let left = [50, 30, 20];
         let count = [0, 0, 0, 0, 0];
+        
         let cri_point = 0;
+        let inc = 0;
         let all_inc = 0;
         let cri_judge = [5, 5, 5, 5];
+        let actionType = 1;
 
+        // ポケモン出現ロジック（元のコードをそのまま移植）
         function encount() {
-            choose = Math.floor( Math.random() * 5 + 1 );
+            let choose = Math.floor(Math.random() * 5 + 1);
             if(choose == 1){
                 mon = 'ピカチュウ'; corr[0] = 255; corr[1] = 20; return choose;
             }
@@ -40,123 +74,111 @@
                 mon = 'ファイヤー'; corr[0] = 3; corr[1] = 165; return choose;
             }
             else{
-                return encount(corr, left);
+                return encount(); // 条件に合わなければ再帰
             }
         }
 
+        // ボールを投げた（または行動を選択した）ときの処理
         function throwBall(ballType) {
-            const ball = req.query.ball;
-            let count = [
-            Number(req.query.count_pika) || 0,
-            Number(req.query.count_moko) || 0,
-            Number(req.query.count_nyor) || 0,
-            Number(req.query.count_danb) || 0,
-            Number(req.query.count_fire) || 0
-            ];
-  
-          let k = 4; t = 1;
-          let a = 0; b = 0; c = 0; d = 0;
-          let critical = '';
-          const cri = Math.floor( Math.random() * 255 + 1 );
-          let num = new Array(4);
-          for(let v = 0; v < 4; v++)
-            num[v] = Math.floor( Math.random() * 65535 + 1 );
-  
-          switch(Number(ball)){
-            case 1: t = 1; --left[0]; actionType = 3; break;
-            case 2: t = 1.5; --left[1]; actionType = 3; break;
-            case 3: t = 2; --left[2]; actionType = 3; break;
-            case 4: actionType = 4; inc = 1; break;
-            case 5: actionType = 2; break;
-            case 6: {
-              actionType = 1; 
-              count = [0, 0, 0, 0, 0]; 
-              left = [50, 30, 20]; 
-              cri_point = 0; 
-              all_inc = 0; 
-              cri_judge = [5, 5, 5, 5]; 
-              break;
+            let t = 1;
+            let k = 4;
+            let a = 0, b = 0, c = 0, d = 0;
+            let critical = '';
+            let judgement = '';
+
+            const cri = Math.floor(Math.random() * 255 + 1);
+            let num = new Array(4);
+            for(let v = 0; v < 4; v++) num[v] = Math.floor(Math.random() * 65535 + 1);
+
+            // ボール選択の処理
+            switch(Number(ballType)){
+                case 1: t = 1; --left[0]; actionType = 3; break;
+                case 2: t = 1.5; --left[1]; actionType = 3; break;
+                case 3: t = 2; --left[2]; actionType = 3; break;
+                case 4: actionType = 4; inc = 1; break;
+                case 6: {
+                    actionType = 1; 
+                    count = [0, 0, 0, 0, 0]; 
+                    left = [50, 30, 20]; 
+                    cri_point = 0; 
+                    all_inc = 0; 
+                    cri_judge = [5, 5, 5, 5]; 
+                    mon = 'ピカチュウ';
+                    poke = 1;
+                    corr = [255, 20];
+                    updateDOM('初期化しました。ピカチュウが現れた！', '');
+                    return;
+                }
             }
-          }
 
-          if(count[0] > all_inc && count[1] > all_inc && count[2] > all_inc && count[3] > all_inc){
-            cri_point += 1.5;
-            all_inc = 100;
-          }
-          if(count[0] >= cri_judge[0]){
-            cri_point += 1.5;
-            cri_judge[0] += 5;
-          }
-          else if(count[1] >= cri_judge[1]){
-            cri_point += 1.5;
-            cri_judge[1] += 5;
-          }
-          else if(count[2] >= cri_judge[2]){
-            cri_point += 2.5;
-            cri_judge[2] += 5;
-          }
-          else if(count[3] >= cri_judge[3]){
-            cri_point += 3;
-            cri_judge[3] += 5;
-          }
-
-          a = (corr[1] * 4096 * corr[0] * t) / (corr[1] * 3);
-          b = 65535 / Math.sqrt(Math.sqrt(1044480 / a));
-          c = (b * cri_point) / (4096);
-
-          if(inc){
-            poke = encount(corr, left);
-          }
-
-          if(cri < c){
-            critical = '捕獲クリティカル！';
-            k = 1;
-          }
-          if(actionType != 4 && actionType != 2){
-            for(let u = 0; u < k; u++){
-              if(num[u] < b) d += 1;
-              else break;
+            // 捕獲補正の計算
+            if(count[0] > all_inc && count[1] > all_inc && count[2] > all_inc && count[3] > all_inc){
+                cri_point += 1.5;
+                all_inc = 100;
             }
-          }
-          if(d == k){
-            if(poke == 5){
-              actionType = 5;
+            if(count[0] >= cri_judge[0]){ cri_point += 1.5; cri_judge[0] += 5; }
+            else if(count[1] >= cri_judge[1]){ cri_point += 1.5; cri_judge[1] += 5; }
+            else if(count[2] >= cri_judge[2]){ cri_point += 2.5; cri_judge[2] += 5; }
+            else if(count[3] >= cri_judge[3]){ cri_point += 3; cri_judge[3] += 5; }
+
+            a = (corr[1] * 4096 * corr[0] * t) / (corr[1] * 3);
+            b = 65535 / Math.sqrt(Math.sqrt(1044480 / a));
+            c = (b * cri_point) / (4096);
+
+            // エンカウント処理
+            if(inc || actionType === 4){
+                poke = encount();
+                inc = 0;
+                updateDOM(`新しいポケモンが現れた！`, '');
+                return; // 新しいポケモンを出現させるだけの時はここで終了
             }
-            judgement = `やった!${mon}を捕まえた！`
-            count[poke - 1]++;
-            inc = 1;
-          }
-          else{
-            judgement = `だめだ!${mon}がボールから出てしまった！`
-            inc = 0;
-          }
-  
-          const display = {
-            judgement: judgement,
-            mon: mon,
-            critical: critical,
-            count_pika: count[0],
-            count_moko: count[1],
-            count_nyor: count[2],
-            count_danb: count[3],
-            count_fire: count[4],
-            left_mon: left[0],
-            left_sup: left[1],
-            left_hyp: left[2],
-            cri_point: cri_point,
-            a: a,
-            b: b,
-            c: c,
-            cri: cri,
-            num: num,
-            actionType: actionType
-          }
-          res.render( 'pokemon', display );
-        });
+
+            // クリティカル判定
+            if(cri < c){
+                critical = '捕獲クリティカル！';
+                k = 1;
+            }
+
+            // 捕獲判定のループ
+            if(actionType != 4 && actionType != 2){
+                for(let u = 0; u < k; u++){
+                    if(num[u] < b) d += 1;
+                    else break;
+                }
+            }
+
+            // 結果の反映
+            if(d == k){
+                if(poke == 5){ actionType = 5; }
+                judgement = `やった! ${mon} を捕まえた！`;
+                count[poke - 1]++;
+                inc = 1; // 次は強制エンカウント
+            } else {
+                judgement = `だめだ! ${mon} がボールから出てしまった！`;
+                inc = 0;
+            }
+
+            // 画面の表示を更新
+            updateDOM(judgement, critical);
+        }
+
+        // HTML上の表示を最新の状態に書き換える関数
+        function updateDOM(judgement, critical) {
+            document.getElementById('message').innerText = judgement;
+            document.getElementById('monster-name').innerText = `${mon} が現れている！`;
+            document.getElementById('critical-msg').innerText = critical;
             
-            // 計算が終わったら、DOM（HTML）を直接書き換える
-            document.getElementById("judgement").innerText = `やった!${mon}を捕まえた！`;
-            // 必要なステータス画面を更新...
+            // 残りボール数更新
+            document.getElementById('left-0').innerText = left[0];
+            document.getElementById('left-1').innerText = left[1];
+            document.getElementById('left-2').innerText = left[2];
+
+            // ゲット数更新
+            document.getElementById('count-0').innerText = count[0];
+            document.getElementById('count-1').innerText = count[1];
+            document.getElementById('count-2').innerText = count[2];
+            document.getElementById('count-3').innerText = count[3];
+            document.getElementById('count-4').innerText = count[4];
         }
     </script>
 </body>
