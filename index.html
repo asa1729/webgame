@@ -8,6 +8,8 @@
         .game-box { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 500px; }
         button { margin: 5px; padding: 10px; cursor: pointer; }
         .status { margin-top: 20px; background: #f0f0f0; padding: 10px; border-radius: 4px; }
+        .end-msg { color: red; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
+        .clear-msg { color: #00cc66; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -18,16 +20,20 @@
         <p id="message">野生のポケモンが現れた！</p>
         <p><strong id="monster-name">ピカチュウが現れた！</strong></p> 
         <p id="critical-msg" style="color: red; font-weight: bold;"></p>
+        
+        <p id="game-end-status"></p>
 
-        <<hr>>
+        <hr>
 
         <p>どのボールを使う？</p>
-        <button onclick="throwBall(1)">モンスターボール (残り: <span id="left-0">50</span>)</button>
-        <button onclick="throwBall(2)">スーパーボール (残り: <span id="left-1">30</span>)</button>
-        <button onclick="throwBall(3)">ハイパーボール (残り: <span id="left-2">20</span>)</button>
+        <button id="btn-ball-0" onclick="throwBall(1)">モンスターボール (残り: <span id="left-0">50</span>)</button>
+        <button id="btn-ball-1" onclick="throwBall(2)">スーパーボール (残り: <span id="left-1">30</span>)</button>
+        <button id="btn-ball-2" onclick="throwBall(3)">ハイパーボール (残り: <span id="left-2">20</span>)</button>
         <br><br>
-        <button onclick="throwBall(4)">次のポケモンを探す</button>
-        <button onclick="throwBall(6)" style="background-color: #ffcccc;">リセット</button>
+        <button id="btn-next" onclick="throwBall(4)">次のポケモンを探す</button>
+        
+        <button id="btn-retry" onclick="throwBall(6)" style="background-color: #ccffcc; display: none;">もう一度遊ぶ？</button>
+        <button id="btn-reset" onclick="throwBall(6)" style="background-color: #ffcccc;">リセット</button>
 
         <div class="status">
             <h3>つかまえた数</h3>
@@ -42,7 +48,7 @@
     </div>
 
     <script>
-        // ゲームの状態を管理する変数（ブラウザを閉じるまで維持されます）
+        // ゲームの状態を管理する変数
         let mon = 'ピカチュウ';
         let poke = 1;
         let corr = [255, 20];
@@ -55,7 +61,7 @@
         let cri_judge = [5, 5, 5, 5];
         let actionType = 1;
 
-        // ポケモン出現ロジック（元のコードをそのまま移植）
+        // ポケモン出現ロジック
         function encount() {
             let choose = Math.floor(Math.random() * 5 + 1);
             if(choose == 1){
@@ -90,25 +96,35 @@
             let num = new Array(4);
             for(let v = 0; v < 4; v++) num[v] = Math.floor(Math.random() * 65535 + 1);
 
+            // リセット処理
+            if (Number(ballType) === 6) {
+                actionType = 1; 
+                count = [0, 0, 0, 0, 0]; 
+                left = [50, 30, 20]; 
+                cri_point = 0; 
+                all_inc = 0; 
+                cri_judge = [5, 5, 5, 5]; 
+                mon = 'ピカチュウ';
+                poke = 1;
+                corr = [255, 20];
+                inc = 0;
+                
+                // ボタンの無効化を解除
+                setButtonsDisabled(false);
+                document.getElementById('btn-retry').style.display = 'none';
+                document.getElementById('game-end-status').className = '';
+                document.getElementById('game-end-status').innerText = '';
+
+                updateDOM('初期化しました。ピカチュウが現れた！', '');
+                return;
+            }
+
             // ボール選択の処理
             switch(Number(ballType)){
                 case 1: t = 1; --left[0]; actionType = 3; break;
                 case 2: t = 1.5; --left[1]; actionType = 3; break;
                 case 3: t = 2; --left[2]; actionType = 3; break;
                 case 4: actionType = 4; inc = 1; break;
-                case 6: {
-                    actionType = 1; 
-                    count = [0, 0, 0, 0, 0]; 
-                    left = [50, 30, 20]; 
-                    cri_point = 0; 
-                    all_inc = 0; 
-                    cri_judge = [5, 5, 5, 5]; 
-                    mon = 'ピカチュウ';
-                    poke = 1;
-                    corr = [255, 20];
-                    updateDOM('初期化しました。ピカチュウが現れた！', '');
-                    return;
-                }
             }
 
             // 捕獲補正の計算
@@ -130,7 +146,8 @@
                 poke = encount();
                 inc = 0;
                 updateDOM(`新しいポケモンが現れた！`, '');
-                return; // 新しいポケモンを出現させるだけの時はここで終了
+                checkGameOver(); // 次を探した瞬間に弾切れの可能性もあるためチェック
+                return;
             }
 
             // クリティカル判定
@@ -149,9 +166,16 @@
 
             // 結果の反映
             if(d == k){
-                if(poke == 5){ actionType = 5; }
                 judgement = `やった! ${mon} を捕まえた！`;
                 count[poke - 1]++;
+                
+                // ファイヤー(poke == 5)を捕まえたらゲームクリア！
+                if(poke == 5){ 
+                    actionType = 5; 
+                    updateDOM(judgement, critical);
+                    gameEnd(true); // クリア処理へ
+                    return;
+                }
                 inc = 1; // 次は強制エンカウント
             } else {
                 judgement = `だめだ! ${mon} がボールから出てしまった！`;
@@ -160,6 +184,43 @@
 
             // 画面の表示を更新
             updateDOM(judgement, critical);
+
+            // 通常のボール投擲後のゲームオーバーチェック
+            checkGameOver();
+        }
+
+        // ボールがすべてゼロになったか調べる関数
+        function checkGameOver() {
+            if (left[0] <= 0 && left[1] <= 0 && left[2] <= 0) {
+                gameEnd(false); // ゲームオーバー処理へ
+            }
+        }
+
+        // ゲーム終了（クリアまたはオーバー）時の画面演出
+        function gameEnd(isClear) {
+            const statusLabel = document.getElementById('game-end-status');
+            const retryBtn = document.getElementById('btn-retry');
+            
+            // 操作ボタンをすべてロック
+            setButtonsDisabled(true);
+            // 「もう一度遊ぶ？」ボタンを表示
+            retryBtn.style.display = 'inline-block';
+
+            if (isClear) {
+                statusLabel.className = 'clear-msg';
+                statusLabel.innerText = '🎉 伝説のポケモン「ファイヤー」を捕まえた！ゲームクリア！ 🎉';
+            } else {
+                statusLabel.className = 'end-msg';
+                statusLabel.innerText = '❌ すべてのボールを使い切ってしまった… ゲームオーバー！ ❌';
+            }
+        }
+
+        // ボタンの有効・無効を一括切り替えする便利関数
+        function setButtonsDisabled(disabled) {
+            document.getElementById('btn-ball-0').disabled = disabled;
+            document.getElementById('btn-ball-1').disabled = disabled;
+            document.getElementById('btn-ball-2').disabled = disabled;
+            document.getElementById('btn-next').disabled = disabled;
         }
 
         // HTML上の表示を最新の状態に書き換える関数
@@ -169,9 +230,14 @@
             document.getElementById('critical-msg').innerText = critical;
             
             // 残りボール数更新
-            document.getElementById('left-0').innerText = left[0];
-            document.getElementById('left-1').innerText = left[1];
-            document.getElementById('left-2').innerText = left[2];
+            document.getElementById('left-0').innerText = Math.max(0, left[0]);
+            document.getElementById('left-1').innerText = Math.max(0, left[1]);
+            document.getElementById('left-2').innerText = Math.max(0, left[2]);
+
+            // モンスターボールが0個ならボタンを無効化（個別個数チェック）
+            document.getElementById('btn-ball-0').disabled = (left[0] <= 0);
+            document.getElementById('btn-ball-1').disabled = (left[1] <= 0);
+            document.getElementById('btn-ball-2').disabled = (left[2] <= 0);
 
             // ゲット数更新
             document.getElementById('count-0').innerText = count[0];
@@ -182,4 +248,3 @@
         }
     </script>
 </body>
-</html>
