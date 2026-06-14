@@ -3,7 +3,6 @@
 
 ## ポケモンゲットゲームについて
 1. https://asa1729.github.io/webgame/ に入る
-1. 「スタート」を選択する
 1. ランダムでポケモンが現れるので，使うボールを選択する．(モンスターボール，スーパーボール，ハイパーボール)
 1. 捕獲の判定が行われ，成功すると捕まえたポケモンの数が増える．
 1. 複数のポケモンを捕まえると「捕獲クリティカル」の確率が高まる．
@@ -17,46 +16,7 @@
 ニョロトノ | やや捕まえにくいポケモン．ボールを20回投げると出現するようになる．5匹以上捕まえたとき上昇するクリティカル補正が大きい
 ダンバル | 捕まえにくいポケモン．ボールを20回投げると出現するようになる．5匹以上捕まえたとき上昇するクリティカル補正がとても大きい
 ファイヤー | ボールを50回投げると出現するようになる．このポケモンを捕まえるとゲームクリア
-### app.pokemon(一部抜粋)
-プログラム本体である．乱数を生成し，ejs側に表示する画面の情報を渡す．下ソースコード内のswitch文はフォームから送られてきた数値を読み取り，次に行う処理の管理を行っている．
-```javascript
 
-app.get("/pokemon", (req, res) => {
-  const ball = req.query.ball;
-  let count = [
-    Number(req.query.count_pika) || 0,  //配列の中身がNaNになることを防ぐ
-    Number(req.query.count_moko) || 0,
-    Number(req.query.count_nyor) || 0,
-    Number(req.query.count_danb) || 0,
-    Number(req.query.count_fire) || 0
-  ];
-  
-  let k = 4; t = 1;
-  let a = 0; b = 0; c = 0; d = 0;
-  let critical = '';
-  const cri = Math.floor( Math.random() * 255 + 1 );  //1〜255の乱数を生成
-  let num = new Array(4);
-  for(let v = 0; v < 4; v++)
-    num[v] = Math.floor( Math.random() * 65535 + 1 ); //1〜65535の乱数を4列の配列に格納
-  
-  switch(Number(ball)){
-    case 1: t = 1; --left[0]; actionType = 3; break;    //モンスターボールを使用する
-    case 2: t = 1.5; --left[1]; actionType = 3; break;    //スーパーボールを使用する
-    case 3: t = 2; --left[2]; actionType = 3; break;    //ハイパーボールを使用する
-    case 4: actionType = 4; inc = 1; break;   //「逃げる」を選択し，ポケモンを再抽選
-    case 5: actionType = 2; break;    //捕獲判定に移る
-    case 6: {
-      actionType = 1; 
-      count = [0, 0, 0, 0, 0];      //捕獲したポケモンの数，ボールの数，捕獲クリティカルの閾値を初期化
-      left = [50, 30, 20]; 
-      cri_point = 0; 
-      all_inc = 0; 
-      cri_judge = [5, 5, 5, 5]; 
-      break;
-    }
-  }
-
-```
 ### choose
 ポケモンの抽選を行う関数．乱数の生成とともに投げたボールの数から出現させるポケモンを制限する．ボールを投げた回数が指定の数値に届かなかった場合はこの関数を再帰的に呼び出して再び抽選を行う．
 ```
@@ -81,27 +41,6 @@ function encount(corr, left){
     return encount(corr, left);   //再帰的関数にする
   }
 }
-```
-## pokemon.ejs(一部抜粋)
-プレイヤーインターフェイスとなる箇所．スタート画面，ボールの選択画面，捕獲判定画面，逃げる画面，ゲームクリア画面をapp5.jsから受け取ったactionTypeの値から判断して表示させる．ボールの選択画面では残り0個になってしまったボールは選択肢から除外し，すべて0の場合ゲームオーバーとなる．
-捕まえたポケモンの数はここで全て保存されており，フォームを送信するたびに配列が初期化されることを防いでいる．
-```
-<% if (actionType == 1) { %>    //actionTypeが1のとき，スタート画面を表示
-        <h1>ポケモンゲットゲーム</h1>
-        <p>ランダムで現れるポケモンを捕まえよう！</p>
-        <hr>
-        <form action="/pokemon" method="get">
-            <input type="radio" name="ball" id="ball5" value="5">
-            <label for="ball5">スタート！</label><br>
-            <input type="submit" value="送信">
-
-            //countの中身がNaNにならないよう条件を追加
-            <input type="hidden" name="count_pika" value="<%= (count_pika) ? count_pika : 0 %>">
-            <input type="hidden" name="count_moko" value="<%= (count_moko) ? count_moko : 0 %>">
-            <input type="hidden" name="count_nyor" value="<%= (count_nyor) ? count_nyor : 0 %>">
-            <input type="hidden" name="count_danb" value="<%= (count_danb) ? count_danb : 0 %>">
-            <input type="hidden" name="count_fire" value="<%= (count_fire) ? count_fire : 0 %>">
-        </form>
 ```
 ## 捕獲判定
 今回参考にした捕獲判定はポケモン3〜5世代で使用されていた計算方法である．都合上，原作とは異なる計算式となっている．
